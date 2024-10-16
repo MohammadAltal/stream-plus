@@ -1,0 +1,42 @@
+/* Ensure the body takes up the full viewport */
+html, body {
+    height: 100%;
+    margin: 0;
+}
+
+/* Set the body div to full page with a background image */
+.body {
+    height: 100%; /* Full height */
+    background-image: url('../images/BG.jpg'); /* Replace with your image URL */
+    background-size: cover; /* Ensure the image covers the full area */
+    background-position: center; /* Center the background image */
+    background-repeat: no-repeat; /* Avoid repeating the image */
+    position: relative; /* For setting child divs relative to this one */
+}
+
+/* Apply blur and set body-in to full page */
+.body-in {
+    height: 100%; /* Full height of the body */
+    background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent overlay */
+}
+
+/* Ensure the content inside container doesn't go beyond the page width */
+.container {
+    z-index: 1; /* Ensure the content stays on top of the blurred background */
+}
+
+.progress-bar {
+    background-color: #E50914;
+}
+
+.card {
+    background-color: rgba(0, 0, 0, 0.7);
+    border-radius: 4px;
+    box-sizing: border-box;
+    color: #ffffff;
+}
+
+/*.card input {*/
+/*    background: transparent;*/
+/*    border-radius: 2px;*/
+/*}*/
