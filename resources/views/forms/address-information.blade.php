@@ -29,7 +29,7 @@
     </div>
 
     <!-- Error message displayed underneath the select -->
-    @error('formData.country')
+    @error('formData.country_id')
     <div class="text-danger mt-1">{{ $message }}</div>
     @enderror
 </div>

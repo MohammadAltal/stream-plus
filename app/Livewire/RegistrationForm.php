@@ -13,14 +13,24 @@ class RegistrationForm extends Component
     public $countries = [];   // Store countries list
     public $months = [];      // Store months (1-12)
     public $years = [];       // Store years (current year + 10)
+    private  $usersService;
+    private  $countriesService;
+
+    public function __construct() {
+        $this->usersService = app(UsersService::class);
+        $this->countriesService = app(CountriesService::class);
+    }
 
     public function mount()
     {
-        // Resolve the CountriesService
-        $countriesService = app(CountriesService::class);
-        $this->countries = $countriesService->index(); // Fetch countries using the service
+        $this->initializeForm();
+        $this->countries = $this->countriesService->index(); // Fetch countries using the service
+        $this->months = range(1, 12); // Prepare months (1 to 12)
+        $this->years = range(date('Y') + 1, date('Y') + 10); // Prepare years (next year to 10 years ahead)
+    }
 
-
+    private function initializeForm()
+    {
         // Initialize form data with default values
         $this->formData = [
             'name' => '',
@@ -38,36 +48,39 @@ class RegistrationForm extends Component
             'expiration_year' => '',
             'cvv' => '',
         ];
-
-        // Prepare months (1 to 12)
-        $this->months = range(1, 12);
-
-        // Prepare years (next year to 10 years ahead)
-        $this->years = range(date('Y') + 1, date('Y') + 10);
     }
 
-    // Validation rules for each step
-    protected $rules = [
-        1 => [
-            'formData.name' => 'required|string|max:255',
-            'formData.email' => 'required|email|unique:users,email',
-            'formData.phone_number' => 'required|digits_between:10,15',
-            'formData.subscription_type' => 'required|in:free,premium',
-        ],
-        2 => [
-            'formData.address_line_1' => 'required|string|max:255',
-            'formData.city' => 'required|string|max:100',
-            'formData.postal_code' => 'required|string|max:20',
-            'formData.state' => 'required|string|max:100',
-            'formData.country_id' => 'required|integer|exists:countries,id',
-        ],
-        3 => [
-            'formData.credit_card_number' => 'required_if:formData.subscription_type,premium|numeric|digits:16',
-            'formData.expiration_month' => 'required_if:formData.subscription_type,premium',
-            'formData.expiration_year' => 'required_if:formData.subscription_type,premium',
-            'formData.cvv' => 'required_if:formData.subscription_type,premium|numeric|digits:3',
-        ],
-    ];
+    // Dynamically get validation rules based on the current step
+    protected function getRulesForStep($step)
+    {
+        $rules = [
+            1 => [
+                'formData.name' => 'required|string|max:255',
+                'formData.email' => 'required|email|unique:users,email',
+                'formData.phone_number' => 'required|digits_between:10,15',
+                'formData.subscription_type' => 'required|in:free,premium',
+            ],
+            2 => [
+                'formData.address_line_1' => 'required|string|max:255',
+                'formData.city' => 'required|string|max:100',
+                'formData.postal_code' => 'required|string|max:20',
+                'formData.state' => 'required|string|max:100',
+                'formData.country_id' => 'required|integer|exists:countries,id',
+            ],
+            3 => [],
+        ];
+
+        if ($this->formData['subscription_type'] === 'premium' && $step === 3) {
+            $rules[3] = [
+                'formData.credit_card_number' => 'required|numeric|digits:16',
+                'formData.expiration_month' => 'required',
+                'formData.expiration_year' => 'required',
+                'formData.cvv' => 'required|numeric|digits:3',
+            ];
+        }
+
+        return $rules[$step];
+    }
 
     // Get the selected country name based on the country_id
     public function getSelectedCountryName()
@@ -76,52 +89,52 @@ class RegistrationForm extends Component
         return $country ? $country['english_short_name'] : '';
     }
 
-    // Move to the next step and handle subscription type logic
+    // Handle step transitions and manage skipping based on subscription type
+    private function handleStepTransition($increment)
+    {
+        if ($this->formData['subscription_type'] === 'free' && $this->currentStep === 2 && $increment > 0) {
+            $this->currentStep = 4; // Skip to confirmation
+        } elseif ($this->formData['subscription_type'] === 'free' && $this->currentStep === 4 && $increment < 0) {
+            $this->currentStep = 2; // Go back to address step
+        } else {
+            $this->currentStep += $increment;
+        }
+    }
+
+    // Move to the next step
     public function nextStep()
     {
         // Validate the current step
-        $this->validate($this->rules[$this->currentStep]);
+        $this->validate($this->getRulesForStep($this->currentStep));
 
-        // Move to the next step or skip to confirmation if Free subscription
-        if ($this->currentStep === 2 && $this->formData['subscription_type'] === 'free') {
-            $this->currentStep = 4; // Skip to confirmation
-        } else {
-            $this->currentStep++;
-        }
+        // Handle step transition
+        $this->handleStepTransition(1);
     }
 
     // Move to the previous step
     public function previousStep()
     {
-        // Handle previous step based on the subscription type
-        if ($this->currentStep === 4 && $this->formData['subscription_type'] === 'free') {
-            $this->currentStep = 2; // Go back to address step
-        } else {
-            $this->currentStep--;
-        }
+        // Handle step transition backwards
+        $this->handleStepTransition(-1);
     }
 
     public function submit()
     {
         try {
             // Register the user via the UsersService
-            $usersService = app(UsersService::class);
-            $usersService->register($this->formData);
+            $this->usersService->register($this->formData);
 
             // Flash success message and reset the form to its initial state
             session()->flash('message', __('keywords.registration_completed_successfully'));
 
             // Reset the form data
-            $this->mount(); // Reinitialize form data
+            $this->initializeForm();
             $this->currentStep = 1;
 
         } catch (\Exception $e) {
-
             session()->flash('error', $e->getMessage());
-
         }
     }
-
 
     // Render the Livewire view
     public function render()
