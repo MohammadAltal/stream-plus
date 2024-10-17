@@ -50,7 +50,8 @@ class UsersService {
             if (!$country) {
                 throw new Exception(__('error_messages.country-not-found'));
             }
-            $data['country_id'] = $country->id;
+            $data['country'] = $country->english_short_name;
+            $data['state_province']   = $data['state'];
             $this->addressesRepository->create($data);
 
             if ($data['subscription_type'] === 'premium') {
