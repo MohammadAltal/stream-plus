@@ -32,8 +32,5 @@ RUN chown -R www-data:www-data /var/www \
 # Expose port 9000 for PHP-FPM
 EXPOSE 9000
 
-RUN php artisan migrate
-RUN php artisan db:seed --class=CountriesSeeder
-
 # Start PHP-FPM server
 CMD ["php-fpm"]
